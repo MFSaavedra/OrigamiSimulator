@@ -15,6 +15,11 @@ You can read more about it in our paper:
 
 **If you have feedback about features you want to see in this app, please see [this thread](https://github.com/amandaghassaei/OrigamiSimulator/discussions/41).**
 
+**Computation mode (this fork):** crease patterns can contain *optional* creases that may fold or stay flat, as in
+Hull and Zakharevich's [Flat origami is Turing complete](https://arxiv.org/abs/2309.07932). The app then decides which
+optional creases must fold for the chosen input values before simulating, so logic gates folded from paper can be
+evaluated and folded. Try **Examples > Computation (logic gates)**, and see [computation/README.md](computation/README.md).
+
 All simulation methods were written from scratch and are executed in parallel in several GPU fragment shaders for fast performance.
 The solver extends work from the following sources:
 <ul>

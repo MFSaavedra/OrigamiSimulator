@@ -10,6 +10,9 @@ function initPattern(globals){
     var rawFold = {};
 
     function clearFold(){
+        //start from a fresh object: a previous FOLD import can leave extra fields
+        //(edges_optional, computation:wires, ...) that must not leak into the next pattern
+        foldData = {};
         foldData.vertices_coords = [];
         foldData.edges_vertices = [];
         foldData.edges_assignment = [];//B = boundary, M = mountain, V = valley, C = cut, F = facet, U = hinge
@@ -28,6 +31,11 @@ function initPattern(globals){
     var cutsRaw = [];
     var triangulationsRaw = [];
     var hingesRaw = [];
+    //optional creases (computation mode): may fold or stay flat
+    var optMountainsRaw = [];
+    var optValleysRaw = [];
+    var optUnassignedRaw = [];
+    var computationMeta = null;
 
     var mountains = [];
     var valleys = [];
@@ -48,6 +56,10 @@ function initPattern(globals){
         cutsRaw = [];
         triangulationsRaw = [];
         hingesRaw = [];
+        optMountainsRaw = [];
+        optValleysRaw = [];
+        optUnassignedRaw = [];
+        computationMeta = null;
 
         mountains = [];
         valleys = [];
@@ -99,6 +111,17 @@ function initPattern(globals){
         var stroke = getStroke($(this));
         return typeForStroke(stroke) == "hinge";
     }
+    function optionalFilter(type, sign){
+        return function(){
+            var $this = $(this);
+            if (typeForStroke(getStroke($this)) != type) return false;
+            this.targetAngle = sign*getOpacity($this)*180;
+            return true;
+        };
+    }
+    var optMountainFilter = optionalFilter("optionalMountain", -1);
+    var optValleyFilter = optionalFilter("optionalValley", 1);
+    var optUnassignedFilter = optionalFilter("optionalUnassigned", 1);
 
     function getOpacity(obj){
         // Check rendered style first (most browsers, supporting CSS styling),
@@ -140,6 +163,10 @@ function initPattern(globals){
         if (stroke == "#00ff00" || stroke == "#0f0" || stroke == "green" || stroke == "rgb(0,255,0)") return "cut";
         if (stroke == "#ffff00" || stroke == "#ff0" || stroke == "yellow" || stroke == "rgb(255,255,0)") return "triangulation";
         if (stroke == "#ff00ff" || stroke == "#f0f" || stroke == "magenta" || stroke == "rgb(255,0,255)") return "hinge";
+        //optional creases, for computation mode (see js/computation.js)
+        if (stroke == "#ff8000" || stroke == "rgb(255,128,0)") return "optionalMountain";
+        if (stroke == "#00ffff" || stroke == "#0ff" || stroke == "cyan" || stroke == "aqua" || stroke == "rgb(0,255,255)") return "optionalValley";
+        if (stroke == "#8000ff" || stroke == "rgb(128,0,255)") return "optionalUnassigned";
         badColors.push(stroke);
         return null;
     }
@@ -151,6 +178,9 @@ function initPattern(globals){
         if (assignment == "C") return "#0f0";//cut
         if (assignment == "F") return "#ff0";//facet
         if (assignment == "U") return "#f0f";//hinge
+        if (assignment == "OM") return "#ff8000";//optional mountain
+        if (assignment == "OV") return "#0ff";//optional valley
+        if (assignment == "OU") return "#8000ff";//optional mountain or valley
         return "#0ff"
     }
     function opacityForAngle(angle, assignment){
@@ -415,6 +445,20 @@ function initPattern(globals){
             findType(verticesRaw, cutsRaw, cutFilter, $paths, $lines, $rects, $polygons, $polylines);
             findType(verticesRaw, triangulationsRaw, triangulationFilter, $paths, $lines, $rects, $polygons, $polylines);
             findType(verticesRaw, hingesRaw, hingeFilter, $paths, $lines, $rects, $polygons, $polylines);
+            findType(verticesRaw, optMountainsRaw, optMountainFilter, $paths, $lines, $rects, $polygons, $polylines);
+            findType(verticesRaw, optValleysRaw, optValleyFilter, $paths, $lines, $rects, $polygons, $polylines);
+            findType(verticesRaw, optUnassignedRaw, optUnassignedFilter, $paths, $lines, $rects, $polygons, $polylines);
+
+            //wire descriptions for computation mode: <metadata id="computation">{"wires": [...]}</metadata>
+            var $meta = _$svg.find("#computation");
+            if ($meta.length){
+                try {
+                    computationMeta = JSON.parse($meta.text());
+                } catch (err){
+                    globals.warn("Could not parse the computation metadata in this SVG.");
+                    computationMeta = null;
+                }
+            }
 
             if (badColors.length>0){
                 badColors = _.uniq(badColors);
@@ -477,19 +521,41 @@ function initPattern(globals){
             var ns = 'http://www.w3.org/2000/svg';
             var svg = document.createElementNS(ns, 'svg');
             svg.setAttribute('viewBox', viewBoxTxt);
+            var computing = globals.computation && globals.computation.isActive();
             for (var i=0;i<rawFold.edges_vertices.length;i++){
                 var line = document.createElementNS(ns, 'line');
                 var edge = rawFold.edges_vertices[i];
                 var vertex = rawFold.vertices_coords[edge[0]];
-                line.setAttribute('stroke', colorForAssignment(rawFold.edges_assignment[i]));
-                line.setAttribute('opacity', opacityForAngle(rawFold.edges_foldAngle[i], rawFold.edges_assignment[i]));
+                var style = computing ? globals.computation.edgeStyle(i) : null;
+                line.setAttribute('stroke', style ? style.stroke : colorForAssignment(rawFold.edges_assignment[i]));
+                line.setAttribute('opacity', style ? style.opacity : opacityForAngle(rawFold.edges_foldAngle[i], rawFold.edges_assignment[i]));
+                if (style && style.dash) line.setAttribute('stroke-dasharray', (strokeWidth*4) + ',' + (strokeWidth*3));
                 line.setAttribute('x1', vertex[0]);
                 line.setAttribute('y1', vertex[2]);
                 vertex = rawFold.vertices_coords[edge[1]];
                 line.setAttribute('x2', vertex[0]);
                 line.setAttribute('y2', vertex[2]);
-                line.setAttribute('stroke-width', strokeWidth);
+                line.setAttribute('stroke-width', strokeWidth*(style ? style.widthScale : 1));
                 svg.appendChild(line);
+            }
+            if (computing){
+                //label wire values at their probe points
+                _.each(globals.computation.wireLabels(), function(label){
+                    var text = document.createElementNS(ns, 'text');
+                    text.setAttribute('x', label.x);
+                    text.setAttribute('y', label.y);
+                    text.setAttribute('font-size', scale/45);
+                    text.setAttribute('font-family', 'sans-serif');
+                    text.setAttribute('font-weight', 'bold');
+                    text.setAttribute('text-anchor', 'middle');
+                    text.setAttribute('dy', -scale/80);
+                    text.setAttribute('fill', label.value === true ? '#16813a' : (label.value === false ? '#b3261e' : '#555'));
+                    text.setAttribute('stroke', '#fff');
+                    text.setAttribute('stroke-width', scale/250);
+                    text.setAttribute('paint-order', 'stroke');
+                    text.textContent = label.text;
+                    svg.appendChild(text);
+                });
             }
             $("#svgViewer").html(svg);
     }
@@ -529,6 +595,15 @@ function initPattern(globals){
             foldData.edges_assignment.push("C");
             foldData.edges_foldAngle.push(null);
         });
+        //optional creases keep their own assignments (OM, OV, OU) through cleanup,
+        //so splits and merges carry the "optional" flag along with the edge
+        _.each([[optMountainsRaw, "OM"], [optValleysRaw, "OV"], [optUnassignedRaw, "OU"]], function(group){
+            _.each(group[0], function(edge){
+                foldData.edges_vertices.push([edge[0], edge[1]]);
+                foldData.edges_assignment.push(group[1]);
+                foldData.edges_foldAngle.push(edge[2] === undefined ? null : edge[2]);
+            });
+        });
 
         if (foldData.vertices_coords.length == 0 || foldData.edges_vertices.length == 0){
             globals.warn("No valid geometry found in SVG, be sure to ungroup all and remove all clipping masks.");
@@ -558,6 +633,11 @@ function initPattern(globals){
 
         foldData = reverseFaceOrder(foldData);//set faces to counter clockwise
 
+        if (globals.computation && globals.computation.isComputational(foldData)){
+            //decide the optional creases first; computation calls back into setResolvedFold
+            return globals.computation.load(foldData, computationMeta);
+        }
+        if (globals.computation) globals.computation.clear();
         return processFold(foldData);
     }
 
@@ -1271,9 +1351,20 @@ function initPattern(globals){
             }
         }
         clearAll();
+        if (!returnCreaseParams && globals.computation){
+            if (globals.computation.isComputational(fold)) return globals.computation.load(fold, null);
+            globals.computation.clear();
+        }
         var allCreaseParams = processFold(fold, returnCreaseParams);
         generateSvg();
         return allCreaseParams;
+    }
+
+    //build a pattern whose optional creases have been decided (called by computation.js)
+    function setResolvedFold(fold){
+        var result = processFold(fold);
+        generateSvg();
+        return result;
     }
 
     function getTriangulatedFaces(){
@@ -1285,6 +1376,7 @@ function initPattern(globals){
         saveSVG: saveSVG,
         getFoldData: getFoldData,
         getTriangulatedFaces: getTriangulatedFaces,
-        setFoldData: setFoldData
+        setFoldData: setFoldData,
+        setResolvedFold: setResolvedFold
     }
 }

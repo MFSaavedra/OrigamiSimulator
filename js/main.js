@@ -59,6 +59,7 @@ $(function() {
     globals.dynamicSolver = initDynamicSolver(globals);
     // globals.rigidSolver = initRigidSolver(globals);//still in development
     globals.pattern = initPattern(globals);
+    globals.computation = initComputation(globals);//optional creases and logic gadgets
     globals.vive = initViveInterface(globals);
     globals.videoAnimator = initVideoAnimator(globals);
 

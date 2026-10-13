@@ -787,6 +787,8 @@
     <script type="text/javascript" src="js/dynamic/dynamicSolver.js"></script>
     <script type="text/javascript" src="js/rigidSolver.js"></script>
     <script type="text/javascript" src="js/pattern.js"></script>
+    <script type="text/javascript" src="js/creaseLogic.js"></script>
+    <script type="text/javascript" src="js/computation.js"></script>
     <script type="text/javascript" src="js/saveSTL.js"></script>
     <script type="text/javascript" src="js/saveFOLD.js"></script>
     <script type="text/javascript" src="js/importer.js"></script>
@@ -1050,6 +1052,16 @@
                             <li><a href="#" class="demo author" data-author="bistable" data-url="Bistable/curvedPleatSimple.svg">Curved Pleat</a></li>
                         </ul>
                     </li>
+                    <li class="dropdown-submenu">
+                        <a tabindex="-1">Computation (logic gates)<span class="pull-right fui-arrow-right"></span></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="#" class="demo author" data-author="hullZakharevich" data-url="Computation/nor.fold">NOR Gate</a></li>
+                            <li><a href="#" class="demo author" data-author="hullZakharevich" data-url="Computation/nand.fold">NAND Gate</a></li>
+                            <li><a href="#" class="demo author" data-author="hullZakharevich" data-url="Computation/or.fold">OR Gate</a></li>
+                            <li><a href="#" class="demo author" data-author="hullZakharevich" data-url="Computation/and.fold">AND Gate</a></li>
+                            <li><a href="#" class="demo author" data-author="hullZakharevich" data-url="Computation/not.fold">NOT Gate</a></li>
+                        </ul>
+                    </li>
                     <li class="divider"></li>
                     <li class="dropdown-submenu">
                         <a tabindex="-1">Problematic Patterns<span class="pull-right fui-arrow-right"></span></a>
@@ -1222,6 +1234,21 @@
     <div class="extraSpace"></div>
 </div>
 <div id="svgViewer"></div>
+<div id="computePanel">
+    <div id="computeHeader"><b>Computation</b> <span id="computeTitle"></span></div>
+    <div class="computeSection">Inputs</div>
+    <div id="computeInputs"></div>
+    <div class="computeSection">Outputs</div>
+    <div id="computeOutputs"></div>
+    <div id="computeStatus" class="smallTxt"></div>
+    <div id="computeSolutionNav">
+        <a href="#" id="computePrev" class="btn btn-default btn-sm">&#9664;</a>
+        <span id="computeSolutionLabel" class="smallTxt"></span>
+        <a href="#" id="computeNext" class="btn btn-default btn-sm">&#9654;</a>
+    </div>
+    <a href="#" id="computeTruthTableButton" class="btn btn-default btn-sm">Truth table</a>
+    <div id="computeTruthTable"></div>
+</div>
 <div id="helper">Load more origami patterns here!</div>
 <div id="controlsBottom">
     <div id="viewToggle" class="bigToggle">
@@ -1431,6 +1458,18 @@
                           Your browser does not support SVG
                         </object>
                     <ul>
+                        <li><b>Optional creases (computation mode)</b> may fold or stay flat, as in
+                        <a href="https://arxiv.org/abs/2309.07932" target="_blank">Flat origami is Turing complete</a>:
+                        optional mountains have <b style="color:#ff8000">orange</b> stroke - rgb(255, 128, 0), hex #ff8000,
+                        optional valleys have <b style="color:#00c8c8">cyan</b> stroke - rgb(0, 255, 255), hex #00ffff, and
+                        optional creases that may fold either way have <b style="color:#8000ff">purple</b> stroke - rgb(128, 0, 255), hex #8000ff.
+                        When a pattern contains them, a <b>Computation</b> panel appears and the app decides which optional creases
+                        must fold (checking Kawasaki's theorem and valid mountain/valley assignments at every vertex) before simulating.
+                        Input and output wires are described by probe points on their creases, in a
+                        <code>&lt;metadata id="computation"&gt;</code> element holding JSON such as
+                        <code>{"wires": [{"name": "A", "role": "input", "true": [[x, y]], "false": [[x, y]]}]}</code>.
+                        In FOLD files, mark optional creases with an <code>edges_optional</code> array and put the wires in
+                        <code>"computation:wires"</code>. See <b>Examples &gt; Computation</b>.</li>
                         <li>Line style and stroke width do not matter.</li>
                         <li>Remove clipping masks from your file before importing.</li>
                         <li>This tool should be able to automatically clean files of slightly misaligned vertices, stray vertices,
@@ -1964,6 +2003,11 @@
         <div id="bistable">
             Allow this pattern to fold, then select <b>Allow User Interaction</b> (Advanced Options right menu) and drag the central vertex
             to pop into into an alternate, inverted configuration.
+        </div>
+        <div id="hullZakharevich">
+            Logic gate from <a href="https://arxiv.org/abs/2309.07932" target="_blank">Flat origami is Turing complete</a>
+            by Thomas C. Hull and Inna Zakharevich. Its optional creases (orange and cyan) may fold or stay flat; pick input
+            values in the <b>Computation</b> panel and the app works out which ones must fold before simulating.
         </div>
         <div id="moosersTrain">
             Original design by Emmanuel Mooser. Crease pattern corrected and modified for rigid origami by William Gardner.

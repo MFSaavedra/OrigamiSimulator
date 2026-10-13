@@ -754,3 +754,113 @@ object {
         display: none;
     }
 }
+
+/* computation mode (js/computation.js) */
+#computePanel {
+    display: none;
+    position: absolute;
+    top: 63px;
+    left: 10px;
+    width: 290px;
+    max-height: calc(100% - 190px);
+    overflow-y: auto;
+    z-index: 4;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid #dfe3e6;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #34495e;
+}
+#computeHeader {
+    margin-bottom: 4px;
+}
+#computeTitle {
+    display: block;
+    font-size: 12px;
+    color: #7f8c8d;
+}
+.computeSection {
+    margin-top: 10px;
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #95a5a6;
+}
+.computeRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 4px 0;
+}
+.computeName {
+    font-weight: bold;
+    margin-right: 8px;
+}
+.computeToggle .btn {
+    padding: 3px 9px;
+    font-size: 12px;
+}
+.computeToggle .btn.active {
+    background: #34495e;
+    color: #fff;
+}
+.computeValue {
+    font-weight: bold;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+.computeTrue {
+    color: #16813a;
+}
+.computeFalse {
+    color: #b3261e;
+}
+.computeUnknown {
+    color: #7f8c8d;
+}
+.computeValue.computeTrue {
+    background: #e3f4e8;
+}
+.computeValue.computeFalse {
+    background: #fbe7e5;
+}
+#computeStatus {
+    margin: 10px 0 6px;
+    line-height: 1.35;
+    color: #7f8c8d;
+}
+#computeSolutionNav {
+    display: none;
+    margin-bottom: 6px;
+}
+#computeSolutionNav .btn {
+    padding: 2px 8px;
+}
+#computeTruthTableButton {
+    padding: 3px 10px;
+    font-size: 12px;
+}
+#computeTruthTable {
+    display: none;
+    margin-top: 8px;
+}
+.computeTable {
+    width: 100%;
+    font-size: 12px;
+    border-collapse: collapse;
+}
+.computeTable th,
+.computeTable td {
+    padding: 2px 4px;
+    border-bottom: 1px solid #ecf0f1;
+    text-align: center;
+}
+.computeTable tr.computeCurrentRow td {
+    background: #f4f6f7;
+    font-weight: bold;
+}
+body.computing #helper {
+    display: none !important;
+}
