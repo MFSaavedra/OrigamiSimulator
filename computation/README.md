@@ -22,15 +22,16 @@ python3 -m http.server 8000
 # then open http://localhost:8000/?model=Computation/nor.fold
 ```
 
-or pick **Examples > Computation (logic gates)**. A **Computation** panel appears: toggle
+or pick **Examples > Computation**. A **Computation** panel appears: toggle
 the inputs, read the output, open the truth table, and switch to **Pattern** view to see
 which optional creases were chosen (bold) and which stayed flat (dashed gray). Slide
 **Fold Percent** to 100% to watch the decided pattern fold flat.
 
 The `assets/Computation/solved/` folder has one plain crease pattern per input
-combination (for example `nor_TF.svg` is the NOR gate with A = TRUE, B = FALSE). These
-use only standard colors, so the unmodified app at
-[origamisimulator.org](https://origamisimulator.org) and
+combination (for example `nor_TF.svg` is the NOR gate with A = TRUE, B = FALSE, and
+`full_adder_TFT.svg` is the full adder with A = TRUE, B = FALSE, Cin = TRUE), plus two
+sums for the 2-bit adder (`adder_2bit_3_1_0.svg` is 3 + 1 + 0). These use only standard
+colors, so the unmodified app at [origamisimulator.org](https://origamisimulator.org) and
 [Flat-Folder](https://origamimagiro.github.io/flat-folder/) open them directly.
 
 ## How it works
@@ -53,6 +54,45 @@ mountains or valleys, inactive ones become flat facet creases.
 Global layer ordering (paper not passing through itself across several vertices) is not
 checked in the app. For the included gates it was verified offline with Flat-Folder:
 every solved configuration has exactly one valid layer order.
+
+## Adders
+
+**Examples > Computation > Full Adder** computes the sum bit S = A xor B xor Cin and the
+carry Cout = majority(A, B, Cin). **2-bit Adder** chains two of them, so that
+(A1 A0) + (B1 B0) + Cin = (Cout S1 S0). Both are assembled from the paper's gadgets.
+
+- **Only triangle twists.** The bare triangle twist is a fan-out: it copies its input to its
+  other two arms, negated. The four gates are triangle twists with control folds. All
+  have three arms 120 degrees apart and wires are straight pleats, so a network of them is
+  a piece of the honeycomb lattice and no wire ever crosses another. That avoids the
+  paper's crossing gadget (the intersector), which is the one gadget the local rules do not
+  settle: when its first wire is TRUE they also allow a configuration with the wrong
+  output, which only the global layer order rules out (`test_gadgets.mjs` shows it).
+- **Reading values outward.** Read every arm as a signal leaving its twist would. Then a
+  bare twist makes its three arms equal, a wire makes its two ends opposite, and the NOR,
+  NAND, OR and AND gadgets compute AND, OR, NAND and NOR of their two inputs.
+- **Search.** `honeycomb_search.py` places two flowers of three hexagons (each the size of
+  a half adder) and one extra gate on the honeycomb, and asks the CP-SAT solver
+  (OR-tools) to label every node (twist, or gate with its output arm and function) and
+  every loose arm (input, output, or junk wire running off the paper). Requiring an
+  acyclic flow of information makes every input row decide every wire.
+- **Creases.** `generate_adder.mjs` (with `circuit.mjs`) places each gadget, rotated so its
+  output is on the chosen arm, joins neighbors with pleats, and gives the sheet an outline
+  that hugs the network, so loose arms leave through the nearby edge instead of running
+  into each other.
+- **Chaining.** The 2-bit adder is two copies of the full adder. The second is shifted along
+  the line leaving the first one's Cout, so one long pleat carries the carry into Cin.
+  `honeycomb_search.py chain N` builds longer ones the same way.
+
+The inputs and outputs do not all sit on one side: in the full adder, A enters at the top,
+B on the upper left and Cin at the lower right, and S and Cout leave on the left. The
+Computation panel lists them by name, and the Pattern view prints each wire's value next
+to it.
+
+| circuit | gadgets | creases (optional) | input rows | configurations per row | decided by propagation | Flat-Folder layer orders |
+|---|---|---|---|---|---|---|
+| full adder | 27 (9 gates, 18 twists) | 612 (341) | 8 | 1 | 341 / 341 | 1 |
+| 2-bit adder | 54 (18 gates, 36 twists) | 1211 (680) | 32 | 1 | 680 / 680 | 1 |
 
 ## File format
 
@@ -91,9 +131,12 @@ for exact input.
 | command | what it does |
 |---|---|
 | `node computation/generate_gadgets.mjs` | rebuilds `assets/Computation/` from the gadgets' TikZ source in the paper (NOR, NAND, OR, AND, NOT) |
-| `node computation/verify_gadgets.mjs [flat-folder]` | checks each gate's truth table with the solver; with a [Flat-Folder](https://github.com/origamimagiro/flat-folder) checkout, also checks that every solved configuration folds flat globally |
+| `node computation/verify_gadgets.mjs [flat-folder]` | checks the truth table of every example (gates and adders) with the solver; with a [Flat-Folder](https://github.com/origamimagiro/flat-folder) checkout, also checks that every solved configuration folds flat globally |
 | `node computation/test_solver.mjs [flat-folder]` | solver unit tests; with Flat-Folder, cross-checks the single-vertex rule on 1,500 random vertices |
-| `python3 computation/browser_test.py` | end-to-end test in headless Chromium (Playwright): flips every gate's inputs in the panel and checks the outputs, including the SVG import path |
+| `node computation/generate_adder.mjs` | rebuilds the adders (`full_adder`, `adder_2bit`) and their solved patterns from `computation/layouts/` |
+| `python3 computation/honeycomb_search.py full-adder` | searches a full adder layout (needs `pip install ortools shapely`); `chain 2 < full_adder.json` makes the 2-bit layout |
+| `node computation/test_gadgets.mjs [flat-folder]` | checks each gadget of the circuit library on its own: gates, twists, the hexagonal twist, the eater, and the intersector |
+| `python3 computation/browser_test.py` | end-to-end test in headless Chromium (Playwright): flips every gate's and adder's inputs in the panel and checks the outputs, including the SVG import path |
 
 Results at the time of writing:
 
@@ -115,5 +158,7 @@ Results at the time of writing:
 - Intermediate fold percentages are still physics: layers can pass through each other,
   exactly as in the original app.
 - The paper's full Rule 110 cell (its Figure 18) is a schematic of gadgets and wires, not
-  a crease pattern, so it is not included; assembling it from the gadgets here would be
-  the next step toward folding an actual cellular automaton step.
+  a crease pattern, so it is not included. The honeycomb approach used for the adders is a
+  natural way to assemble it.
+- The adders' sheets are not rectangles: their outline follows the network so that loose
+  arms do not have to cross on their way to the edge.

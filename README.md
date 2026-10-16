@@ -18,7 +18,8 @@ You can read more about it in our paper:
 **Computation mode (this fork):** crease patterns can contain *optional* creases that may fold or stay flat, as in
 Hull and Zakharevich's [Flat origami is Turing complete](https://arxiv.org/abs/2309.07932). The app then decides which
 optional creases must fold for the chosen input values before simulating, so logic gates folded from paper can be
-evaluated and folded. Try **Examples > Computation (logic gates)**, and see [computation/README.md](computation/README.md).
+evaluated and folded. Try **Examples > Computation**, which has the paper's logic gates plus a full adder and a 2-bit
+adder assembled from them, and see [computation/README.md](computation/README.md).
 
 All simulation methods were written from scratch and are executed in parallel in several GPU fragment shaders for fast performance.
 The solver extends work from the following sources:

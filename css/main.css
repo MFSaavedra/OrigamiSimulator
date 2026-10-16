@@ -857,6 +857,10 @@ object {
     border-bottom: 1px solid #ecf0f1;
     text-align: center;
 }
+.computeTableCompact th,
+.computeTableCompact td {
+    padding: 2px 2px;
+}
 .computeTable tr.computeCurrentRow td {
     background: #f4f6f7;
     font-weight: bold;

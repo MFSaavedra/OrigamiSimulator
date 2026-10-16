@@ -176,8 +176,9 @@ const dot = (a, b) => a[0]*b[0] + a[1]*b[1];
 const norm = a => Math.hypot(a[0], a[1]);
 
 class PointSet {
-    constructor(tol){ this.tol = tol; this.points = []; }
+    constructor(tol, snap){ this.tol = tol; this.points = []; this.snap = snap; }
     id(p){
+        if (this.snap) p = this.snap(p);
         for (let i=0;i<this.points.length;i++){
             const q = this.points[i];
             if (Math.abs(q[0]-p[0]) < this.tol && Math.abs(q[1]-p[1]) < this.tol) return i;
@@ -191,8 +192,10 @@ class PointSet {
  * Split crease pieces at all crossings and T-junctions, merge overlaps, add the
  * paper boundary, and return a planar graph.
  * pieces: [{p, q, mandatory, mv}], boundary: polygon [[x,y], ...]
+ * snap (optional): maps every vertex to its exact position, e.g. the nearest point of a
+ * fine lattice, so that float noise in intersections cannot bend straight creases.
  */
-export function buildArrangement(pieces, boundary, tol = 1e-6){
+export function buildArrangement(pieces, boundary, tol = 1e-6, snap = null){
     const n = pieces.length;
     const cuts = pieces.map(() => [0, 1]);
     for (let i=0;i<n;i++){
@@ -221,7 +224,7 @@ export function buildArrangement(pieces, boundary, tol = 1e-6){
             }
         }
     }
-    const points = new PointSet(tol*10);
+    const points = new PointSet(tol*10, snap);
     for (const c of boundary) points.id(c);
     const edgeMap = new Map();
     for (let i=0;i<n;i++){

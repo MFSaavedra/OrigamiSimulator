@@ -1053,8 +1053,11 @@
                         </ul>
                     </li>
                     <li class="dropdown-submenu">
-                        <a tabindex="-1">Computation (logic gates)<span class="pull-right fui-arrow-right"></span></a>
+                        <a tabindex="-1">Computation<span class="pull-right fui-arrow-right"></span></a>
                         <ul class="dropdown-menu">
+                            <li><a href="#" class="demo author" data-author="hullZakharevichAdder" data-url="Computation/full_adder.fold">Full Adder (A + B + Cin)</a></li>
+                            <li><a href="#" class="demo author" data-author="hullZakharevichAdder2" data-url="Computation/adder_2bit.fold">2-bit Adder</a></li>
+                            <li class="divider"></li>
                             <li><a href="#" class="demo author" data-author="hullZakharevich" data-url="Computation/nor.fold">NOR Gate</a></li>
                             <li><a href="#" class="demo author" data-author="hullZakharevich" data-url="Computation/nand.fold">NAND Gate</a></li>
                             <li><a href="#" class="demo author" data-author="hullZakharevich" data-url="Computation/or.fold">OR Gate</a></li>
@@ -2003,6 +2006,18 @@
         <div id="bistable">
             Allow this pattern to fold, then select <b>Allow User Interaction</b> (Advanced Options right menu) and drag the central vertex
             to pop into into an alternate, inverted configuration.
+        </div>
+        <div id="hullZakharevichAdder">
+            One-bit full adder (sum S and carry Cout of A + B + Cin) built from the gadgets of
+            <a href="https://arxiv.org/abs/2309.07932" target="_blank">Flat origami is Turing complete</a> by Thomas C. Hull and
+            Inna Zakharevich: a honeycomb of triangle twists, nine of which carry the control folds of the paper's gates. Pick the
+            inputs in the <b>Computation</b> panel; the app decides which optional creases fold and then simulates the result.
+        </div>
+        <div id="hullZakharevichAdder2">
+            Two-bit ripple-carry adder, (A1 A0) + (B1 B0) + Cin = (Cout S1 S0): two copies of the full adder, where one
+            straight pleat carries the first carry into the second. Built from the gadgets of
+            <a href="https://arxiv.org/abs/2309.07932" target="_blank">Flat origami is Turing complete</a> by Thomas C. Hull and
+            Inna Zakharevich; pick the inputs in the <b>Computation</b> panel.
         </div>
         <div id="hullZakharevich">
             Logic gate from <a href="https://arxiv.org/abs/2309.07932" target="_blank">Flat origami is Turing complete</a>

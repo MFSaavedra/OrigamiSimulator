@@ -253,6 +253,13 @@ function initComputation(globals){
         if (state.expected) $head.append("<th>check</th>");
         $table.append($head);
         var rows = 1 << inputs.length;
+        //wide tables (adders) use 1 and 0 so that every column fits in the panel
+        var compact = inputs.length + outputs.length > 4;
+        var cell = function(v){
+            if (!compact) return valueLabel(v);
+            return v === true ? "1" : (v === false ? "0" : "?");
+        };
+        if (compact) $table.addClass("computeTableCompact");
         for (var r=0;r<rows;r++){
             var values = {};
             _.each(inputs, function(w, i){ values[w.name] = !!(r & (1 << (inputs.length - 1 - i))); });
@@ -260,20 +267,26 @@ function initComputation(globals){
             var $tr = $("<tr></tr>");
             var current = _.every(inputs, function(w){ return state.values[w.name] === values[w.name]; });
             if (current) $tr.addClass("computeCurrentRow");
-            _.each(inputs, function(w){ $tr.append($("<td></td>").text(valueLabel(values[w.name]))); });
+            _.each(inputs, function(w){ $tr.append($("<td></td>").text(cell(values[w.name]))); });
             var outValues = [];
             _.each(outputs, function(w){
                 var vals = _.uniq(_.map(result.solutions, function(s){ return CL.wireValue(s, w); }));
                 var v = vals.length === 1 ? vals[0] : null;
                 outValues.push(v);
-                var text = result.solutions.length ? valueLabel(v) : "no fold";
+                var text = result.solutions.length ? cell(v) : "no fold";
                 $tr.append($("<td></td>").text(text).addClass(v === true ? "computeTrue" : (v === false ? "computeFalse" : "")));
             });
             if (state.expected){
                 var row = _.find(state.expected, function(e){
                     return _.every(inputs, function(w){ return e.inputs[w.name] === values[w.name]; });
                 });
-                var ok = row && outValues.length === 1 && outValues[0] === row.output;
+                //gates store a single `output`, circuits with several outputs store `outputs`
+                var ok = false;
+                if (row && row.outputs){
+                    ok = _.every(outputs, function(w, k){ return !_.has(row.outputs, w.name) || outValues[k] === row.outputs[w.name]; });
+                } else if (row){
+                    ok = outValues.length === 1 && outValues[0] === row.output;
+                }
                 $tr.append($("<td></td>").text(row ? (ok ? "✓" : "✗") : ""));
             }
             $table.append($tr);

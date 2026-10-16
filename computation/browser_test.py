@@ -104,6 +104,72 @@ def main():
             if got != want:
                 failures.append(("not", a, got, want))
 
+        # full adder: three inputs, two outputs
+        page.goto(base + "?model=Computation/full_adder.fold")
+        page.wait_for_function("() => $('#computePanel').is(':visible') && $('#computeOutputs .computeRow').length === 2", timeout=30000)
+        for a, b, c in itertools.product([False, True], repeat=3):
+            set_input(page, "A", a)
+            set_input(page, "B", b)
+            set_input(page, "Cin", c)
+            page.wait_for_timeout(300)
+            outputs = panel_state(page)["outputs"]
+            n = a + b + c
+            want = {"S": "TRUE" if n % 2 else "FALSE", "Cout": "TRUE" if n >= 2 else "FALSE"}
+            ok = all(outputs.get(k) == v for k, v in want.items())
+            print(f"full adder: A={a!s:5} B={b!s:5} Cin={c!s:5} -> S={outputs.get('S')} Cout={outputs.get('Cout')} "
+                  f"(expected S={want['S']} Cout={want['Cout']}) {'ok' if ok else 'MISMATCH'}")
+            if not ok:
+                failures.append(("full adder", a, b, c, outputs, want))
+        page.click("#computeTruthTableButton")
+        page.wait_for_timeout(1500)
+        table = page.evaluate("() => $('#computeTruthTable tr').map(function(){ return $(this).text(); }).get()")
+        print("full adder truth table rows:", len(table) - 1, "all checked:", all("✓" in row for row in table[1:]))
+        if len(table) != 9 or not all("✓" in row for row in table[1:]):
+            failures.append(("full adder truth table", table))
+        set_input(page, "A", True)
+        set_input(page, "B", False)
+        set_input(page, "Cin", True)
+        page.wait_for_timeout(500)
+        page.click("#navPattern")
+        page.wait_for_timeout(800)
+        page.screenshot(path=os.path.join(SHOTS, "full_adder_pattern_TFT.png"))
+        page.click("#navSimulation")
+        page.evaluate("() => { globals.creasePercent = 1.0; globals.shouldChangeCreasePercent = true; globals.controls.updateCreasePercent(); }")
+        page.wait_for_timeout(15000)
+        page.screenshot(path=os.path.join(SHOTS, "full_adder_sim_TFT.png"))
+
+        # two-bit ripple-carry adder: (A1 A0) + (B1 B0) + Cin = (Cout S1 S0)
+        page.goto(base + "?model=Computation/adder_2bit.fold")
+        page.wait_for_function("() => $('#computePanel').is(':visible') && $('#computeOutputs .computeRow').length === 3", timeout=60000)
+        for x, y, cin in [(0, 0, 0), (1, 1, 0), (3, 1, 0), (2, 2, 1), (3, 3, 1), (2, 1, 1), (1, 2, 0), (3, 2, 0)]:
+            for name, v in (("A1", x >> 1 & 1), ("A0", x & 1), ("B1", y >> 1 & 1), ("B0", y & 1), ("Cin", cin)):
+                set_input(page, name, bool(v))
+            page.wait_for_timeout(600)
+            outputs = panel_state(page)["outputs"]
+            total = x + y + cin
+            want = {"Cout": total >> 2 & 1, "S1": total >> 1 & 1, "S0": total & 1}
+            ok = all(outputs.get(k) == ("TRUE" if v else "FALSE") for k, v in want.items())
+            got = "".join("1" if outputs.get(k) == "TRUE" else "0" for k in ("Cout", "S1", "S0"))
+            print(f"2-bit adder: {x} + {y} + {cin} -> Cout S1 S0 = {got} (expected {total:03b}) {'ok' if ok else 'MISMATCH'}")
+            if not ok:
+                failures.append(("2-bit adder", x, y, cin, outputs))
+        page.click("#computeTruthTableButton")
+        page.wait_for_timeout(3000)
+        table = page.evaluate("() => $('#computeTruthTable tr').map(function(){ return $(this).text(); }).get()")
+        print("2-bit adder truth table rows:", len(table) - 1, "all checked:", all("✓" in row for row in table[1:]))
+        if len(table) != 33 or not all("✓" in row for row in table[1:]):
+            failures.append(("2-bit adder truth table", len(table)))
+        for name, v in (("A1", 1), ("A0", 1), ("B1", 0), ("B0", 1), ("Cin", 0)):
+            set_input(page, name, bool(v))
+        page.wait_for_timeout(800)
+        page.click("#navPattern")
+        page.wait_for_timeout(1000)
+        page.screenshot(path=os.path.join(SHOTS, "adder_2bit_pattern_3plus1.png"))
+        page.click("#navSimulation")
+        page.evaluate("() => { globals.creasePercent = 1.0; globals.shouldChangeCreasePercent = true; globals.controls.updateCreasePercent(); }")
+        page.wait_for_timeout(20000)
+        page.screenshot(path=os.path.join(SHOTS, "adder_2bit_sim_3plus1.png"))
+
         # NOR in detail: fold it, screenshot simulation and pattern views, open the truth table
         page.goto(base + "?model=Computation/nor.fold")
         page.wait_for_function("() => $('#computeOutputs .computeRow').length > 0", timeout=20000)

@@ -46,17 +46,22 @@ for (const file of files){
     console.log(`  ${problem.variables.length} optional creases, ${problem.constraints.length} constrained vertices`);
     if (unmatched.length){ console.log(`  unmatched wire probes: ${unmatched.join(", ")}`); failures++; continue; }
     if (problem.infeasibleVertices.length){ console.log(`  infeasible vertices: ${problem.infeasibleVertices}`); failures++; continue; }
-    const output = wires.find(w => w.role === "output");
+    const outputs = wires.filter(w => w.role === "output");
+    const letter = v => v === null ? "?" : (v ? "T" : "F");
     for (const row of fold["computation:expected"]){
         const pins = CL.pinsForInputs(wires, row.inputs);
         const result = CL.solve(problem, pins, {maxSolutions: 64});
-        const values = result.solutions.map(s => CL.wireValue(s, output));
-        const distinct = [...new Set(values)];
-        const ok = result.status === "ok" && distinct.length === 1 && distinct[0] === row.output;
+        //single-output gates store `output`, circuits with several outputs store `outputs`
+        const want = row.outputs || {[outputs[0].name]: row.output};
+        let ok = result.status === "ok";
+        const got = outputs.map(w => {
+            const distinct = [...new Set(result.solutions.map(s => CL.wireValue(s, w)))];
+            if (distinct.length !== 1 || distinct[0] !== want[w.name]) ok = false;
+            return `${w.name} = ${distinct.map(letter).join("/")} (expected ${letter(want[w.name])})`;
+        });
         if (!ok) failures++;
         const inputs = Object.entries(row.inputs).map(([k, v]) => `${k}=${v ? "T" : "F"}`).join(" ");
-        let line = `  ${inputs} -> ${output.name} = ${distinct.map(v => v === null ? "?" : (v ? "T" : "F")).join("/")}` +
-            ` (expected ${row.output ? "T" : "F"}) ${ok ? "ok" : "MISMATCH"}` +
+        let line = `  ${inputs} -> ${got.join(", ")} ${ok ? "ok" : "MISMATCH"}` +
             ` | ${result.solutions.length}${result.truncated ? "+" : ""} configuration(s),` +
             ` ${result.forced}/${result.variables} creases decided by propagation, ${result.nodes} search nodes`;
         if (flatFolder){
@@ -72,5 +77,5 @@ for (const file of files){
         console.log(line);
     }
 }
-console.log(failures ? `\n${failures} problem(s) found` : "\nAll gates behave as expected.");
+console.log(failures ? `\n${failures} problem(s) found` : "\nAll examples behave as expected.");
 process.exit(failures ? 1 : 0);
